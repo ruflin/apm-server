@@ -62,11 +62,11 @@ func newServer(config Config, publish successCallback) *http.Server {
 	}
 }
 
-func start(server *http.Server, ssl *SSLConfig) {
+func run(server *http.Server, ssl *SSLConfig) error {
 	if ssl.isEnabled() {
-		go server.ListenAndServeTLS(ssl.Cert, ssl.PrivateKey)
+		return server.ListenAndServeTLS(ssl.Cert, ssl.PrivateKey)
 	} else {
-		go server.ListenAndServe()
+		return server.ListenAndServe()
 	}
 }
 

@@ -2,6 +2,7 @@ package beater
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/elastic/beats/libbeat/beat"
 	"github.com/elastic/beats/libbeat/common"
@@ -12,6 +13,7 @@ type beater struct {
 	done   chan struct{}
 	config Config
 	client beat.Client
+	once   sync.Once
 }
 
 // Creates beater
@@ -44,8 +46,18 @@ func (bt *beater) Run(b *beat.Beat) error {
 	}
 
 	server := newServer(bt.config, callback)
-	start(server, bt.config.SSL)
-	defer stop(server)
+	go func() {
+		err := run(server, bt.config.SSL)
+		if err != nil {
+			bt.Stop()
+		}
+	}()
+	defer func() {
+		err := stop(server)
+		if err != nil {
+			logp.Err(err.Error())
+		}
+	}()
 
 	logp.Info("apm-server is running! Hit CTRL-C to stop it.")
 	// Blocks until service is shut down
@@ -55,5 +67,7 @@ func (bt *beater) Run(b *beat.Beat) error {
 }
 
 func (bt *beater) Stop() {
-	close(bt.done)
+	bt.once.Do(func() {
+		close(bt.done)
+	})
 }
