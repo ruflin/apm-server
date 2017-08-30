@@ -9,8 +9,7 @@ import (
 
 // publisher forwards batches of events to libbeat. It uses GuaranteedSend
 // to enable infinite retry of events being processed.
-// If the publisher it's input is channel is full, an error is returned
-// immediately.
+// If the publisher's input channel is full, an error is returned immediately.
 // Number of concurrent requests waiting for processing do depend on the configured
 // queue size. As the publisher is not waiting for the outputs ACK, the total
 // number requests(events) active in the system can exceed the queue size. Only
@@ -37,8 +36,8 @@ func newPublisher(pipeline beat.Pipeline, N int) (*publisher, error) {
 	client, err := pipeline.ConnectWith(beat.ClientConfig{
 		PublishMode: beat.GuaranteedSend,
 
-		// We want to wait for events in pipeline on shutdown?
-		// If set `Close` will block for the duration or until pipeline is empty
+		// TODO: We want to wait for events in pipeline on shutdown?
+		//       If set >0 `Close` will block for the duration or until pipeline is empty
 		WaitClose: 0,
 	})
 	if err != nil {
@@ -46,10 +45,11 @@ func newPublisher(pipeline beat.Pipeline, N int) (*publisher, error) {
 	}
 
 	p := &publisher{
-		// Decrement N by one. One request will be actively processed by the worker,
-		// while the other concurrent requests will be buffered in the queue.
-		events: make(chan []beat.Event, N-1),
 		client: client,
+
+		// Set channel size to N - 1. One request will be actively processed by the
+		// worker, while the other concurrent requests will be buffered in the queue.
+		events: make(chan []beat.Event, N-1),
 	}
 
 	p.wg.Add(1)
