@@ -11,6 +11,10 @@ import (
 // to enable infinite retry of events being processed.
 // If the publisher it's input is channel is full, an error is returned
 // immediately.
+// Number of concurrent requests waiting for processing do depend on the configured
+// queue size. As the publisher is not waiting for the outputs ACK, the total
+// number requests(events) active in the system can exceed the queue size. Only
+// the number of concurrent HTTP requests trying to publish at the same time is limited.
 type publisher struct {
 	events chan []beat.Event
 	client beat.Client
@@ -18,13 +22,18 @@ type publisher struct {
 }
 
 var (
-	errFull = errors.New("Queue is full")
+	errFull              = errors.New("Queue is full")
+	errInvalidBufferSize = errors.New("Request buffer must be > 0")
 )
 
 // newPublisher creates a new publisher instance. A new go-routine is started
 // for forwarding events to libbeat. Stop must be called to close the
 // beat.Client and free resources.
-func newPublisher(pipeline beat.Pipeline) (*publisher, error) {
+func newPublisher(pipeline beat.Pipeline, N int) (*publisher, error) {
+	if N <= 0 {
+		return nil, errInvalidBufferSize
+	}
+
 	client, err := pipeline.ConnectWith(beat.ClientConfig{
 		PublishMode: beat.GuaranteedSend,
 
@@ -37,7 +46,9 @@ func newPublisher(pipeline beat.Pipeline) (*publisher, error) {
 	}
 
 	p := &publisher{
-		events: make(chan []beat.Event, 20),
+		// Decrement N by one. One request will be actively processed by the worker,
+		// while the other concurrent requests will be buffered in the queue.
+		events: make(chan []beat.Event, N-1),
 		client: client,
 	}
 

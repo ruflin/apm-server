@@ -31,7 +31,7 @@ func New(_ *beat.Beat, ucfg *common.Config) (beat.Beater, error) {
 func (bt *beater) Run(b *beat.Beat) error {
 	var err error
 
-	pub, err := newPublisher(b.Publisher)
+	pub, err := newPublisher(b.Publisher, bt.config.ConcurrentRequests)
 	if err != nil {
 		return err
 	}
