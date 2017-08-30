@@ -94,15 +94,7 @@ func createHandler(p processor.Processor, config Config, report reporter) handle
 		requestCounter.Inc()
 
 		code, err := processRequest(r, p, config.SecretToken, config.MaxUnzippedSize, report)
-		w.WriteHeader(code)
-		if err != nil {
-			responseErrors.Inc()
-			if acceptsJSON(r) {
-				sendJSON(w, map[string]interface{}{"error": err.Error()})
-			} else {
-				sendPlain(w, err.Error())
-			}
-		}
+		sendStatus(w, r, code, err)
 	}
 }
 
@@ -220,6 +212,20 @@ func decodeData(req *http.Request) (io.ReadCloser, error) {
 func acceptsJSON(r *http.Request) bool {
 	h := r.Header.Get("Accept")
 	return strings.Contains(h, "*/*") || strings.Contains(h, "application/json")
+}
+
+func sendStatus(w http.ResponseWriter, r *http.Request, code int, err error) {
+	w.WriteHeader(code)
+	if err != nil {
+		responseErrors.Inc()
+		if acceptsJSON(r) {
+			w.Header().Add("Content-Type", "application/json")
+			sendJSON(w, map[string]interface{}{"error": err.Error()})
+		} else {
+			w.Header().Add("Content-Type", "text/plain; charset=UTF-8")
+			sendPlain(w, err.Error())
+		}
+	}
 }
 
 func sendJSON(w http.ResponseWriter, msg map[string]interface{}) {
