@@ -148,7 +148,7 @@ func processRequest(
 	if err = report(list); err != nil {
 		return reportError(503, fmt.Errorf("Error adding data to internal queue: %s", err))
 	}
-	return 200, nil
+	return 202, nil
 }
 
 func reportError(code int, err error) (int, error) {
@@ -194,6 +194,9 @@ func decodeData(req *http.Request) (io.ReadCloser, error) {
 	}
 
 	reader := req.Body
+	if reader == nil {
+		return nil, fmt.Errorf("No content supplied")
+	}
 
 	switch req.Header.Get("Content-Encoding") {
 	case "deflate":
