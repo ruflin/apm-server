@@ -13,6 +13,9 @@ import (
 	"github.com/elastic/go-ucfg/yaml"
 )
 
+var pip *pipeline.Pipeline
+var pub *publisher
+
 func SetupServer(b *testing.B) *http.ServeMux {
 	bt, err := instance.NewBeat("apm-server-test", "")
 	if err != nil {
@@ -38,17 +41,24 @@ output:
 	if err != nil {
 		b.Fatal(err)
 	}
-	pipeline, err := pipeline.Load(bt.Info, bt.Config.Pipeline, bt.Config.Output)
-	if err != nil {
-		b.Fatalf("error initializing publisher: %v", err)
+	if pip == nil {
+		var err error
+		pip, err = pipeline.Load(bt.Info, bt.Config.Pipeline, bt.Config.Output)
+		if err != nil {
+			b.Fatalf("error initializing publisher: %v", err)
+		}
 	}
 	// bt.Publisher = pipeline
 
-	pub, err := newPublisher(pipeline, 20)
-	if err != nil {
-		b.Fatal(err)
+	if pub == nil {
+		var err error
+		pub, err = newPublisher(pip, 20)
+
+		if err != nil {
+			b.Fatal(err)
+		}
+		defer pub.Stop()
 	}
-	defer pub.Stop()
 
 	return newMuxer(defaultConfig, pub.Send)
 }
