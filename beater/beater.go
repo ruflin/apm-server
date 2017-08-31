@@ -17,6 +17,7 @@ type beater struct {
 
 // Creates beater
 func New(_ *beat.Beat, ucfg *common.Config) (beat.Beater, error) {
+	panic(nil)
 	beaterConfig := defaultConfig
 	if err := ucfg.Unpack(&beaterConfig); err != nil {
 		return nil, fmt.Errorf("Error reading config file: %v", err)
