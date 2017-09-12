@@ -5,10 +5,10 @@ RUN mkdir -p /app
 
 WORKDIR /app
 
-RUN git clone https://github.com/elastic/apm-agent-python
+RUN git clone https://github.com/opbeat/opbeans-python.git .
 
 RUN pip install -Ur requirements.txt
-RUN pip uninstall apm-agent-python -y
+RUN pip uninstall apm-agent-python -y; exit 0
 RUN pip install git+https://github.com/elastic/apm-agent-python.git@master
 
 RUN bunzip2 -k demo/db.sql.bz2
